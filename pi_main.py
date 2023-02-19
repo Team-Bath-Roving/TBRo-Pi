@@ -63,7 +63,7 @@ rc=RadioControl(rcSer,out)
 # init pan tilt
 pantilt=PanTilt(0.005) # update at 30Hz
 # init status light
-led=StatusNeopixel(0.1) # max brightness 20%
+led=StatusNeopixel(0.05) # max brightness 20%
 # init screwtank driver
 screw=ScrewTank(mcu,MAX_SPEED,MAX_ACCEL,MICROSTEP,MAX_PING)
 
@@ -87,7 +87,7 @@ powered=False
 # provide comms to output module
 out.assignTCP(comms)
 # wait for TCP client
-# comms.connect()
+comms.connect()
 # init comms watchdog timer
 prevWatchdog=time.time()
 
@@ -109,11 +109,11 @@ while True:
 		prevWatchdog=time.time()
 		comms.send({"PING":0})
 		mcu.write("T\n")
-		rcSer.write("PING\n")
+		# rcSer.write("PING\n")
 		# if input("Stop?")=='y':
 		# 	comms.close()
-		# if not comms.connected:
-		# 	comms.connect()
+		if not comms.connected:
+			comms.connect()
 		if not mcu.connected:
 			mcu.connect()
 		if not rcSer.connected:
@@ -128,7 +128,8 @@ while True:
 	if comms.available()>0:
 		data=comms.read()
 		for prefix,msg in data.items():
-			out.write("TCP",f"{prefix.ljust(6)}: {msg}",False)
+			out.write("LAPTOP",f"{prefix.ljust(6)}: {msg}",False)
+			
 	# Fetch latest commands from RC controller
 	rc.receive()
 	rc.process()
