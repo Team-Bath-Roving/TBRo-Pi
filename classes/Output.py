@@ -7,7 +7,7 @@ PREFIX={
 	"WARN"   :(Fore.YELLOW,Fore.WHITE),
 	"ERROR"  :(Fore.RED,Fore.WHITE),
 	"EXCEPT" :(Fore.MAGENTA,Fore.WHITE),
-	"TCP"    :(Fore.CYAN,Fore.WHITE),
+	"LAPTOP"    :(Fore.CYAN,Fore.WHITE),
 	"MCU"    :(Fore.BLUE,Fore.WHITE),
 	"PING"	 :(Fore.LIGHTBLACK_EX,Fore.WHITE),
 	"ACK"	 :(Fore.LIGHTMAGENTA_EX,Fore.WHITE),
