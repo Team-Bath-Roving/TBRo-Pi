@@ -5,3 +5,4 @@ These will handle:
 - High level control of motors and actuators
 - Automation and Computer Vision
 - Camera live streaming
+Note that this version is configured for the Screw Tank vehicle, so needs adapting for other purposes
