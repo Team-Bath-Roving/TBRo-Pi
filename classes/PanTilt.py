@@ -15,6 +15,9 @@ class PanTilt:
 	tilt_continuous=False
 	pan_velocity=0
 	tilt_velocity=0
+	accel=0.01
+	pan_velocity_current=0
+	tilt_velocity_current=0
 	# init sets update interval in seconds
 	def __init__(self,interval):
 		self.interval=interval
@@ -25,29 +28,57 @@ class PanTilt:
 		pantilthat.servo_enable(1,state)
 		pantilthat.servo_enable(2,state)
 	# move to set angles. call as fast as possible
+	def pan_accelerate(self,target):
+		if self.pan_velocity_current<target:
+			if target > 0:
+				self.pan_velocity_current+=self.accel
+				self.pan_velocity_current=constrain(self.pan_velocity_current,-180,target)
+			else:
+				self.pan_velocity_current=0
+		elif self.pan_velocity_current>target:
+			if target < 0:
+				self.pan_velocity_current-=self.accel
+				self.pan_velocity_current=constrain(self.pan_velocity_current,target,180)
+			else:
+				self.pan_velocity_current=0
+	def tilt_accelerate(self,target):
+		if self.tilt_velocity_current<target:
+			if target > 0:
+				self.tilt_velocity_current+=self.accel
+				self.tilt_velocity_current=constrain(self.tilt_velocity_current,-180,target)
+			else:
+				self.tilt_velocity_current=0
+		elif self.tilt_velocity_current>target:
+			if target < 0:
+				self.tilt_velocity_current-=self.accel
+				self.tilt_velocity_current=constrain(self.tilt_velocity_current,target,180)
+			else:
+				self.tilt_velocity_current=0
 	def run(self):
 		if time.time()-self.prevInterval>self.interval:
 			self.prevInterval=time.time()
 			if self.pan_continuous:
-				self.target_pan+=self.pan_velocity
-				self.target_pan=constrain(self.target_pan,-90,90)
-			if self.tilt_continuous:
-				self.target_tilt+=self.tilt_velocity
-				self.target_tilt=constrain(self.target_tilt,-90,90)
-			if self.pan!=self.target_pan:
+				self.pan_accelerate(self.pan_velocity)
+			elif self.pan!=self.target_pan:
 				if self.pan < self.target_pan:
-					self.pan+=self.pan_rate
-					self.pan=constrain(self.pan,-90,self.target_pan)
+					self.pan_accelerate(self.pan_rate)
 				elif self.pan > self.target_pan:
-					self.pan-=self.pan_rate
-					self.pan=constrain(self.pan,self.target_pan,90)
-			if self.tilt!=self.target_tilt:
+					self.pan_accelerate(-self.pan_rate)
+				else:
+					self.pan_accelerate(0)
+			if self.tilt_continuous:
+				self.tilt_accelerate(self.tilt_velocity)
+			elif self.tilt!=self.target_tilt:
 				if self.tilt < self.target_tilt:
-					self.tilt+=self.tilt_rate
-					self.tilt=constrain(self.tilt,-90,self.target_tilt)
+					self.tilt_accelerate(self.tilt_rate)
 				elif self.tilt > self.target_tilt:
-					self.tilt-=self.tilt_rate
-					self.tilt=constrain(self.tilt,self.target_tilt,90)
+					self.tilt_accelerate(-self.tilt_rate)
+				else:
+					self.tilt_accelerate(0)
+			self.pan+=self.pan_velocity_current
+			self.pan=constrain(self.pan,-90,90)
+			self.tilt+=self.tilt_velocity_current
+			self.tilt=constrain(self.tilt,-90,90)
 			pantilthat.pan(self.pan)
 			pantilthat.tilt(self.tilt)
 	# move instantly to an angle at next interval
@@ -62,23 +93,25 @@ class PanTilt:
 		self.tilt=angle
 		self.target_tilt=angle
 	# move at a set rate to an angle
-	def pan_toward(self,angle,rate=0):
+	def pan_toward(self,angle,rate=-1):
 		self.pan_continuous=False
 		angle=constrain(angle,-90,90)
 		self.target_pan=angle
-		if rate!=0:
+		if rate!=-1:
 			self.set_pan_rate(rate)
-	def tilt_toward(self,angle,rate=0):
+	def tilt_toward(self,angle,rate=-1):
 		self.tilt_continuous=False
 		angle=constrain(angle,-90,90)
 		self.target_tilt=angle
-		if rate!=0:
+		if rate!=-1:
 			self.set_tilt_rate(rate)
 	# set rate of change
 	def set_pan_rate(self,rate):
 		self.pan_rate=constrain(rate,0,90)
 	def set_tilt_rate(self,rate):
 		self.tilt_rate=constrain(rate,0,90)
+	def set_accel(self,accel):
+		self.accel=accel
 	# instantly change angle by an amount at next interval
 	def offset_pan(self,angle):
 		self.pan_continuous=False
