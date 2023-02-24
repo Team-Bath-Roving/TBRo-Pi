@@ -1,6 +1,10 @@
 import serial
+import time
 from classes.Output import Output
 # Serial wrapper with exception handling
+
+TIMEOUT=0.5
+
 class SerialWrapper:
 	s=None
 	connected=False
@@ -13,7 +17,7 @@ class SerialWrapper:
 	def connect(self):
 		self.output.write("INFO",f"Connecting Serial, port {self.port}")
 		try:
-			self.s=serial.Serial(self.port,self.baud)
+			self.s=serial.Serial(self.port,self.baud,timeout=TIMEOUT)
 			self.output.write("INFO",f"Serial connected, port {self.port}")
 			self.connected=True
 		except:
@@ -38,8 +42,15 @@ class SerialWrapper:
 	def receive(self,retry=False):
 		if self.connected:
 			try:
-				if self.s.in_waiting >0:
-					self.lines.append(self.s.readline().decode())
+				if self.s.in_waiting >10:
+					t=time.time()
+					line=self.s.readline()
+					if time.time()-t < TIMEOUT-0.1:
+						line=line.decode()
+						line=line.rstrip()
+						self.lines.append(line)
+					else:
+						self.output.write("WARN",f"Serial timeout, port {self.port}")
 			except Exception as e:
 				self.output.write("ERROR",f"Serial read failed, port {self.port}")
 				self.output.write("EXCEPT",e)
