@@ -7,10 +7,10 @@ import time
 
 import socket
 import classes.Constrain
-from classes.Comms import CommsServer
+from tbroLib.Comms import CommsServer
 from classes.SerialWrapper import SerialWrapper
 from classes.PanTilt import PanTilt,StatusNeopixel
-from classes.Output import Output
+from tbroLib.Output import Output
 from classes.screwtank import ScrewTank
 from classes.RadioControl import RadioControl
 import sys
@@ -26,7 +26,7 @@ Status = {
 }
 
 WATCHDOG_TIME = 5
-MCU_KEEPALIVE = 0.4
+MCU_KEEPALIVE = 0.4 # if MCU doesn't recieve this it turns motors off
 # Network
 
 # HOST_IP = socket.gethostbyname(socket.gethostname())
@@ -53,13 +53,14 @@ INIT_COMMANDS=[	f"\nS{MAX_SPEED}\n",
 ### Object instantiation
 
 # init program output (TCP and bash)
-out=Output()
+out=Output("LAPTOP")
+out.toggleDisplayTypes(["PING","ACK","STATUS"],False)
 # init TCP comms
-comms=CommsServer(HOST_IP,PORTS,out,None)
+comms=CommsServer(HOST_IP,PORTS,out,None,WATCHDOG_TIME)
 # init motor controller serial
-mcu=SerialWrapper(MCU_PORT,MCU_BAUD,out)
+mcu=SerialWrapper(MCU_PORT,MCU_BAUD,out,"MCU")
 # init RC reciever serial
-rcSer=SerialWrapper(RC_PORT,RC_BAUD,out)
+rcSer=SerialWrapper(RC_PORT,RC_BAUD,out,"RC")
 # init RC reciever module
 rc=RadioControl(rcSer,out)
 # init pan tilt
@@ -86,12 +87,10 @@ atexit.register(exit_handler)
 status="STARTED"
 # store whether Arduino is powered
 powered=False
-# provide comms to output module
-out.assignTCP(comms)
 # wait for TCP client
 comms.connect()
 # init comms watchdog timer
-prevWatchdog=time.time()
+# prevWatchdog=time.time()
 
 prevKeepalive=time.time()
 
@@ -103,43 +102,26 @@ while True:
 	# MCU keepalive
 	if time.time()-prevKeepalive>MCU_KEEPALIVE:
 		mcu.write("T\n") # send test message 
-
-	# Connection watchdog
-	if time.time()-prevWatchdog>WATCHDOG_TIME:
-		prevWatchdog=time.time()
-		comms.send({"PING":0})
-		rcSer.write("PING\n")
-		# if input("Stop?")=='y':
-		# 	comms.close()
-		if not comms.connected:
-			out.write("WARN","TCP connection lost, reconnecting",False)
-			comms.connect()
-		if not mcu.connected:
-			out.write("WARN","MCU connection lost, reconnecting",True)
-			mcu.connect()
-		if not rcSer.connected:
-			out.write("WARN","RC connection lost, reconnecting",True)
-			rcSer.connect()
-			# print("hi")
-		# Status
-		if mcu.connected:
-			status="SERIAL_CONN"
-			if comms.connected:
-				status="SOCK_CONN"
-				if powered:
-					status="POWERED"
+		
+	# Status LEDs
+	prevStatus=status
+	if mcu.connected:
+		status="SERIAL_CONN"
+		if comms.connected:
+			status="SOCK_CONN"
+			if powered:
+				status="POWERED"
 		else:
 			status="STARTED"
+	if status!=prevStatus:
 		led.dispHSV(*Status[status])
-		
 
 	# Update pan/tilt
 	pantilt.run()
 
 	# Fetch latest TCP messages
 	data={}
-	comms.receive()
-	if comms.available()>0:
+	if comms.receive()>0:
 		data=comms.read()
 		for prefix,msg in data.items():
 			out.write("LAPTOP",f"{prefix.ljust(6)}: {msg}",False)
@@ -175,9 +157,9 @@ while True:
 			screw.turnForward(msg)
 	
 	# Fetch latest serial messages from MCU
-	mcu.receive()
 	
-	if mcu.available()>0:
+	
+	if mcu.receive()>0:
 		line=mcu.read()
 		if len(line)>0:
 			out.write("MCU",line)
