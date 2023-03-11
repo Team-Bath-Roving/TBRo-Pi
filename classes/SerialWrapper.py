@@ -30,7 +30,7 @@ class SerialWrapper:
 		self.output.write("INFO",f"Connecting Serial, port {self.port}")
 		try:
 			self.s=serial.Serial(self.port,self.baud,timeout=TIMEOUT)
-			self.output.write("INFO",f"Serial connected, port {self.port}")
+			self.output.write("INFO",f"Serial connected, port {self.port}",True)
 			self.connected=True
 		except:
 			self.output.write("ERROR",f"Serial connect failed, port {self.port}")
@@ -42,8 +42,8 @@ class SerialWrapper:
 				self.s.write(string.encode())
 				return True
 			except Exception as e:
-				self.output.write("ERROR",f"Serial write failed, port {self.port}")
-				self.output.write("EXCEPT",e)
+				self.output.write("ERROR",f"Serial write failed, port {self.port}",True)
+				self.output.write("EXCEPT",e,,True)
 				if retry:
 					self.connect() # try to reconnect
 					return self.write(string,False) # retry write
@@ -61,15 +61,15 @@ class SerialWrapper:
 						line=line.decode()
 						line=line.rstrip()
 						self.lines.append(line)
-						return self.available()
 					else:
-						self.output.write("WARN",f"Serial timeout, port {self.port}")
+						self.output.write("WARN",f"Serial timeout, port {self.port}",True)
 			except Exception as e:
-				self.output.write("ERROR",f"Serial read failed, port {self.port}")
+				self.output.write("ERROR",f"Serial read failed, port {self.port}",True)
 				self.output.write("EXCEPT",e)
 				if retry:
 					self.connect()
 					self.receive(False)
+		return self.available()
 	def available(self):
 		return len(self.lines)
 	def read(self):
