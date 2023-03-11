@@ -71,11 +71,15 @@ class ScrewTank:
             else:                # decrease right speed
                 self.r_offset=speed
                 self.l_offset=0
-        if speed<0: # turn left
+        elif speed<0: # turn left
             if self.forwardTurn: # increase right speed
                 self.l_offset=0
                 self.r_offset=-speed
             else:                # decrease left speed
                 self.r_offset=0
                 self.l_offset=speed
-
+        else:
+            self.l_offset=0
+            self.r_offset=0
+        self.setL()
+        self.setR()
