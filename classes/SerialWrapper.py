@@ -1,6 +1,8 @@
 import serial
 import time
-from classes.Output import Output
+from tbroLib.Output import Output
+import threading
+
 # Serial wrapper with exception handling
 
 TIMEOUT=1
@@ -9,11 +11,21 @@ class SerialWrapper:
 	s=None
 	connected=False
 	lines=[]
-	def __init__(self,port:int,baud:int,output:Output):
+	def __init__(self,port:int,baud:int,output:Output,watchdog_time,name):
 		self.output=output
 		self.port=port
 		self.baud=baud
+		self.name=name
 		self.connect()
+		self.watchdog_thread=threading.Thread(target=self.watchdog,args=(watchdog_time,),daemon=True)
+		self.watchdog_thread.start()
+	def watchdog(self,ping_delay):
+		while(True):
+			time.sleep(ping_delay)
+			self.write("P\n")
+			if not self.connected:
+				self.output.write("WARN",f"Serial connection to {self.name} lost, reconnecting",True)
+				self.connect()
 	def connect(self):
 		self.output.write("INFO",f"Connecting Serial, port {self.port}")
 		try:
@@ -49,6 +61,7 @@ class SerialWrapper:
 						line=line.decode()
 						line=line.rstrip()
 						self.lines.append(line)
+						return self.available()
 					else:
 						self.output.write("WARN",f"Serial timeout, port {self.port}")
 			except Exception as e:
