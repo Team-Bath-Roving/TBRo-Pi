@@ -10,6 +10,7 @@ TIMEOUT=1
 class SerialWrapper:
 	s=None
 	connected=False
+	prev_connected=True
 	lines=[]
 	def __init__(self,port:int,baud:int,output:Output,watchdog_time,name):
 		self.output=output
@@ -24,26 +25,31 @@ class SerialWrapper:
 			time.sleep(ping_delay)
 			self.write("P\n")
 			if not self.connected:
-				self.output.write("WARN",f"Serial connection to {self.name} lost, reconnecting",True)
+				if self.prev_connected:
+					self.output.write("WARN",f"{self.name} serial connection lost, reconnecting",True)
+					self.prev_connected=False
 				self.connect()
+			else:
+				self.prev_connected=True
 	def connect(self):
-		self.output.write("INFO",f"Connecting Serial, port {self.port}")
+		self.output.write("INFO",f"Connecting {self.name} serial, port {self.port}")
 		try:
 			self.s=serial.Serial(self.port,self.baud,timeout=TIMEOUT)
-			self.output.write("INFO",f"Serial connected, port {self.port}",True)
+			self.output.write("INFO",f"{self.name} serial connected, port {self.port}",True)
 			self.connected=True
 		except:
-			self.output.write("ERROR",f"Serial connect failed, port {self.port}")
+			self.output.write("ERROR",f"{self.name} serial connect failed, port {self.port}")
 			self.connected=False
 		return self.connected
-	def write(self,string,retry=True):
+	def write(self,string,retry=False):
 		if self.connected:
 			try:
 				self.s.write(string.encode())
 				return True
 			except Exception as e:
-				self.output.write("ERROR",f"Serial write failed, port {self.port}",True)
-				self.output.write("EXCEPT",e,,True)
+				self.connected=False
+				self.output.write("ERROR",f"{self.name} serial write failed, port {self.port}")
+				self.output.write("EXCEPT",e)
 				if retry:
 					self.connect() # try to reconnect
 					return self.write(string,False) # retry write
@@ -62,9 +68,10 @@ class SerialWrapper:
 						line=line.rstrip()
 						self.lines.append(line)
 					else:
-						self.output.write("WARN",f"Serial timeout, port {self.port}",True)
+						self.output.write("WARN",f"{self.name} serial timeout, port {self.port}",True)
 			except Exception as e:
-				self.output.write("ERROR",f"Serial read failed, port {self.port}",True)
+				self.connected=False
+				self.output.write("ERROR",f"{self.name} serial read failed, port {self.port}")
 				self.output.write("EXCEPT",e)
 				if retry:
 					self.connect()
@@ -76,11 +83,11 @@ class SerialWrapper:
 		if self.available()>0:
 			return self.lines.pop()
 		else:
-			self.output.write("WARN",f"Nothing to read in serial buffer, port {self.port}")
+			self.output.write("WARN",f"Nothing to read in {self.name} serial buffer, port {self.port}")
 			return ""
 	def close(self):
-		self.output.write("INFO",f"Closing serial, port {self.port}")
+		self.output.write("INFO",f"Closing {self.name} serial, port {self.port}")
 		try:
 			self.s.close()
 		except:
-			self.output.write("ERROR",f"failed to close serial, port {self.port}")
+			self.output.write("ERROR",f"failed to close {self.name} serial, port {self.port}")
