@@ -3,7 +3,7 @@ import time
 from classes.Output import Output
 # Serial wrapper with exception handling
 
-TIMEOUT=0.5
+TIMEOUT=1
 
 class SerialWrapper:
 	s=None
