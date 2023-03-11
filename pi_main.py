@@ -26,6 +26,7 @@ Status = {
 }
 
 WATCHDOG_TIME = 5
+MCU_KEEPALIVE = 0.4
 # Network
 
 # HOST_IP = socket.gethostbyname(socket.gethostname())
@@ -43,6 +44,7 @@ MAX_SPEED = 2000
 MAX_ACCEL = 1000
 MICROSTEP = 4
 MAX_PING = 2000
+
 # Motor controller startup commands
 INIT_COMMANDS=[	f"\nS{MAX_SPEED}\n",
 				f"\nA{MAX_ACCEL}\n",
@@ -91,33 +93,45 @@ comms.connect()
 # init comms watchdog timer
 prevWatchdog=time.time()
 
+prevKeepalive=time.time()
+
+
+
+
 ### Main Loop
 while True:
-	# Status
-	if mcu.connected:
-		status="SERIAL_CONN"
-		if comms.connected:
-			status="SOCK_CONN"
-			if powered:
-				status="POWERED"
-	else:
-		status="STARTED"
-	led.dispHSV(*Status[status])
-	
+	# MCU keepalive
+	if time.time()-prevKeepalive>MCU_KEEPALIVE:
+		mcu.write("T\n") # send test message 
+
 	# Connection watchdog
 	if time.time()-prevWatchdog>WATCHDOG_TIME:
 		prevWatchdog=time.time()
 		comms.send({"PING":0})
-		mcu.write("T\n")
-		# rcSer.write("PING\n")
+		rcSer.write("PING\n")
 		# if input("Stop?")=='y':
 		# 	comms.close()
 		if not comms.connected:
+			out.write("WARN","TCP connection lost, reconnecting",False)
 			comms.connect()
 		if not mcu.connected:
+			out.write("WARN","MCU connection lost, reconnecting",True)
 			mcu.connect()
 		if not rcSer.connected:
+			out.write("WARN","RC connection lost, reconnecting",True)
 			rcSer.connect()
+			# print("hi")
+		# Status
+		if mcu.connected:
+			status="SERIAL_CONN"
+			if comms.connected:
+				status="SOCK_CONN"
+				if powered:
+					status="POWERED"
+		else:
+			status="STARTED"
+		led.dispHSV(*Status[status])
+		
 
 	# Update pan/tilt
 	pantilt.run()
@@ -129,7 +143,8 @@ while True:
 		data=comms.read()
 		for prefix,msg in data.items():
 			out.write("LAPTOP",f"{prefix.ljust(6)}: {msg}",False)
-			
+
+	
 	# Fetch latest commands from RC controller
 	rc.receive()
 	rc.process()
@@ -138,7 +153,7 @@ while True:
 	for prefix,msg in data.items():
 		
 		if 'PING' == prefix:
-			comms.send({"ACK":"Pi"})
+			out.write("ACK","Ping from laptop, forwarding to MCU")
 			screw.ping()
 		if 'CAM_PAN' == prefix:
 			pantilt.pan_speed(-msg)
@@ -158,13 +173,15 @@ while True:
 			screw.roll(msg)
 		if 'TURN_FORWARD' == prefix:
 			screw.turnForward(msg)
-
+	
 	# Fetch latest serial messages from MCU
 	mcu.receive()
+	
 	if mcu.available()>0:
 		line=mcu.read()
-		out.write("MCU",line)
-		if "Motor power on" in line:
-			powered=True
-		elif "Motor power off" in line:
-			powered=False
+		if len(line)>0:
+			out.write("MCU",line)
+			if "Motor power on" in line:
+				powered=True
+			elif "Motor power off" in line:
+				powered=False
