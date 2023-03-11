@@ -1,5 +1,5 @@
 from classes.SerialWrapper import SerialWrapper
-from classes.Output import Output
+from tbroLib.Output import Output
 from classes.Constrain import constrain
 import json
 
