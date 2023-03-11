@@ -119,6 +119,7 @@ class ClientSocket(object):
 
     def close(self):
         self._socket.setblocking(True)
+        self._socket.send(None)
         self._socket.close()
 
 
@@ -153,4 +154,5 @@ class ServerSocket(object):
 
     def close(self):
         self._socket.setblocking(True)
+        self._socket.send(None)
         self._socket.close()
