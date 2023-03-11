@@ -27,7 +27,10 @@ class RadioControl:
             line=self.ser.read()
             # self.output.write("RC",line,false)
             # print(line)
-            self.channels.update(json.loads(line.rstrip()))
+            if "{" in line:
+                self.channels.update(json.loads(line.rstrip()))
+            else:
+                self.output.write("RC",line)
             # print(self.channels)
     def process(self):
         self.commands={}
