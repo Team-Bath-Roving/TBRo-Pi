@@ -8,12 +8,13 @@ import time
 import socket
 import classes.Constrain
 from tbroLib.Comms import CommsServer
-from classes.SerialWrapper import SerialWrapper
+from classes.SerialWrapper import SerialWrapper, scanUSB
 from classes.PanTilt import PanTilt,StatusNeopixel
 from tbroLib.Output import Output
 from classes.screwtank import ScrewTank
 from classes.RadioControl import RadioControl
 import sys
+import serial.tools.list_ports
 
 ### CONSTANTS
 # Status colours     
@@ -57,10 +58,15 @@ out=Output("LAPTOP")
 out.toggleDisplayTypes(["PING","ACK","STATUS"],False)
 # init TCP comms
 comms=CommsServer(HOST_IP,PORTS,out,None,WATCHDOG_TIME)
+# wait for TCP client
+comms.connect()
+
+scanUSB(out)
+
 # init motor controller serial
-mcu=SerialWrapper(MCU_PORT,MCU_BAUD,out,"MCU")
+mcu=SerialWrapper(None,MCU_BAUD,out,WATCHDOG_TIME,"MCU","USB Serial")
 # init RC reciever serial
-rcSer=SerialWrapper(RC_PORT,RC_BAUD,out,"RC")
+rcSer=SerialWrapper(None,RC_BAUD,out,WATCHDOG_TIME,"RC","HKT6A-V2 RX")
 # init RC reciever module
 rc=RadioControl(rcSer,out)
 # init pan tilt
@@ -87,8 +93,7 @@ atexit.register(exit_handler)
 status="STARTED"
 # store whether Arduino is powered
 powered=False
-# wait for TCP client
-comms.connect()
+
 # init comms watchdog timer
 # prevWatchdog=time.time()
 
@@ -162,7 +167,7 @@ while True:
 	if mcu.receive()>0:
 		line=mcu.read()
 		if len(line)>0:
-			out.write("MCU",line)
+			out.write("MCU",line,True)
 			if "Motor power on" in line:
 				powered=True
 			elif "Motor power off" in line:

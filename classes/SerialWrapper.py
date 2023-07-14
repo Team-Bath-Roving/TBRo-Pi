@@ -2,21 +2,33 @@ import serial
 import time
 from tbroLib.Output import Output
 import threading
+import serial.tools.list_ports
 
 # Serial wrapper with exception handling
 
+
 TIMEOUT=1
+
+def scanUSB(out):
+	out.write("INFO","Scanning USB ports...",True)
+	ports = serial.tools.list_ports.comports()
+	for port in sorted(ports):
+		out.write("INFO",f"Found USB Device: {port.device} Desc: {port.description} Prod: {port.product}  VID:PID={port.vid}:{port.pid}  MF:{port.manufacturer}",True)
 
 class SerialWrapper:
 	s=None
 	connected=False
 	prev_connected=True
+	scanUSB=False
 	lines=[]
-	def __init__(self,port:int,baud:int,output:Output,watchdog_time,name):
+	def __init__(self,port,baud:int,output:Output,watchdog_time,name,prod_code=None):
 		self.output=output
 		self.port=port
 		self.baud=baud
-		self.name=name
+		self.name=name # the name used in terminal output
+		self.prod_code=prod_code # device product code
+		if not prod_code is None: # if product code defined, 
+			self.scanUSB=True
 		self.connect()
 		self.watchdog_thread=threading.Thread(target=self.watchdog,args=(watchdog_time,),daemon=True)
 		self.watchdog_thread.start()
@@ -31,15 +43,29 @@ class SerialWrapper:
 				self.connect()
 			else:
 				self.prev_connected=True
+	def getUSBport(self):
+		ports = serial.tools.list_ports.comports()
+		for port in ports:
+			if port.product==self.prod_code:
+				if port.device!=self.port:
+					self.output.write(f"INFO",f"Found {self.name} at port {port.device}",True)
+				return port.device
+		if self.prev_connected:
+			self.port=None
+			self.output.write(f"WARN",f"Could not find {self.name} device: \"{self.prod_code}\"")
+		return None
 	def connect(self):
-		self.output.write("INFO",f"Connecting {self.name} serial, port {self.port}")
-		try:
-			self.s=serial.Serial(self.port,self.baud,timeout=TIMEOUT)
-			self.output.write("INFO",f"{self.name} serial connected, port {self.port}",True)
-			self.connected=True
-		except:
-			self.output.write("ERROR",f"{self.name} serial connect failed, port {self.port}")
-			self.connected=False
+		if self.scanUSB:
+			self.port=self.getUSBport()
+		if not self.port is None:
+			self.output.write("INFO",f"Connecting {self.name} serial, port {self.port}")
+			try:
+				self.s=serial.Serial(self.port,self.baud,timeout=TIMEOUT)
+				self.output.write("INFO",f"{self.name} serial connected",True)
+				self.connected=True
+			except:
+				self.output.write("ERROR",f"{self.name} serial connect failed")
+				self.connected=False
 		return self.connected
 	def write(self,string,retry=False):
 		if self.connected:
@@ -48,7 +74,7 @@ class SerialWrapper:
 				return True
 			except Exception as e:
 				self.connected=False
-				self.output.write("ERROR",f"{self.name} serial write failed, port {self.port}")
+				self.output.write("ERROR",f"{self.name} serial write failed")
 				self.output.write("EXCEPT",e)
 				if retry:
 					self.connect() # try to reconnect
@@ -68,10 +94,10 @@ class SerialWrapper:
 						line=line.rstrip()
 						self.lines.append(line)
 					else:
-						self.output.write("WARN",f"{self.name} serial timeout, port {self.port}",True)
+						self.output.write("WARN",f"{self.name} serial timeout",True)
 			except Exception as e:
 				self.connected=False
-				self.output.write("ERROR",f"{self.name} serial read failed, port {self.port}")
+				self.output.write("ERROR",f"{self.name} serial read failed")
 				self.output.write("EXCEPT",e)
 				if retry:
 					self.connect()
@@ -83,11 +109,11 @@ class SerialWrapper:
 		if self.available()>0:
 			return self.lines.pop()
 		else:
-			self.output.write("WARN",f"Nothing to read in {self.name} serial buffer, port {self.port}")
+			self.output.write("WARN",f"Nothing to read in {self.name} serial buffer")
 			return ""
 	def close(self):
-		self.output.write("INFO",f"Closing {self.name} serial, port {self.port}")
+		self.output.write("INFO",f"Closing {self.name} serial")
 		try:
 			self.s.close()
 		except:
-			self.output.write("ERROR",f"failed to close {self.name} serial, port {self.port}")
+			self.output.write("ERROR",f"failed to close {self.name} serial")
