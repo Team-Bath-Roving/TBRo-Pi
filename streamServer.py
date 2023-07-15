@@ -1,6 +1,9 @@
+import socket
+import time
+
 from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder,Encoder,JpegEncoder,MJPEGEncoder
-from picamera2.outputs import FfmpegOutput,FileOutput
+from picamera2.encoders import H264Encoder
+from picamera2.outputs import FileOutput
 
 
 # class stream:
@@ -56,28 +59,43 @@ from picamera2.outputs import FfmpegOutput,FileOutput
 #                 cam=Picamera2(idx)
 
 
-picamYUV = Picamera2(0)
-picamMJPEG = Picamera2(1)
+from signal import signal, SIGINT
+running=True
+stereo = Picamera2(0)
+stereo_config = stereo.create_video_configuration({
+    "size": (1296, 972)},)
+stereo.configure(stereo_config)
+# pantilt = Picamera2(0)
+# pantilt_config = pantilt.create_video_configuration({
+#     "size": (640,480)},
+#     "format":"YUYV"
+#     )
+# pantilt.configure(pantilt_config)
+encoder = H264Encoder(bitrate=1000000,repeat=True,iperiod=5)
 
-video_configYUV = picamYUV.create_video_configuration()
-picamYUV.configure(video_configYUV)
-video_configMJPEG = picamMJPEG.create_video_configuration({"format": "MJPEG"})
-picamMJPEG.configure(video_configMJPEG)
-
-encoderh264 = H264Encoder(repeat=True, iperiod=15)
-# encoderNull= Encoder()
-
-outputH264 = FfmpegOutput("-f mpegts tcp://0.0.0.0:8081")
-outputMJPEG = FfmpegOutput("-f mjpeg tcp://0.0.0.0:8082")
-
-encoderh264.output=outputH264
-# encoderNull.output=outputMJPEG
-
-# picamYUV.start_recording(encoderh264,outputH264)
-picamMJPEG.start_recording(MJPEGEncoder(),outputMJPEG)
-# outputMJPEG.start()
+MCAST_GRP = '224.1.1.1'
+MCAST_PORT = 5007
 
 
-while input():
-    print("s")
+stereo_sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+stereo_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+# pantilt_sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+stereo_sock.connect((MCAST_GRP, MCAST_PORT))
+stream = stereo_sock.makefile("wb")
+stereo.start_recording(encoder, FileOutput(stream))
+# pantilt_sock.connect(("192.168.68.103", 8082))
+# stream = pantilt_sock.makefile("wb")
+# pantilt_sock.start_recording(encoder, FileOutput(stream))
 
+while(running):
+    time.sleep(1)
+
+
+def handler(signal_received,frame):
+    # stereo.stop_recording()
+    pantilt.stop_recording()
+    stereo_sock.close()
+    
+    running=False
+
+signal(SIGINT, handler)
