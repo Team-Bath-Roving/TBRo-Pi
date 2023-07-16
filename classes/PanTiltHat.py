@@ -3,7 +3,7 @@ import colorsys
 import time
 from classes.Constrain import constrain
 
-class PanTilt:
+class PanTiltHat:
 	pan=0 # current pos
 	tilt=0
 	target_pan=0 # target pos
@@ -113,10 +113,10 @@ class PanTilt:
 	def set_accel(self,accel):
 		self.accel=accel
 	# instantly change angle by an amount at next interval
-	def offset_pan(self,angle):
+	def pan(self,angle):
 		self.pan_continuous=False
 		self.set_pan(self.pan+angle)
-	def offset_tilt(self,angle):
+	def tilt(self,angle):
 		self.tilt_continuous=False
 		self.set_tilt(self.tilt+angle)
 	def pan_speed(self,angle):
