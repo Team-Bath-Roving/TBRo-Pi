@@ -21,31 +21,39 @@ def getCamSettings(cam):
         continue
 
       a = dict()
-      setting = out[i].split(':',1)[0].split()   
-              # ['brightness', '0x00980900', '(int)']
-      param = out[i].split(':',1)[1].split()     
-              # ['min=-64', 'max=64', 'step=1', 'default=0', 'value=0']
-      # Put paramaters into a dictionary
-      for j in range(0, len(param)):
-        a.update({param[j].split('=',1)[0]: param[j].split('=',1)[1]})
-      # Add bitName and setting type to params dictionary 
-      a.update({'bitName': setting[1]})
-      a.update({'type': setting[2].strip("()")})
-      # Create a legend for menu entries and add to dictionary with other params
-      if a['type'] == 'menu':
-        h = 0
-        legend = ''
-        while h >= 0:
-          h += 1
-          ih = i + h
-          if out[ih].startswith('\t\t\t\t') and (ih) <= nLines:
-            legend = legend + out[i+h].strip() + "   "
+      key_val = out[i].split(':',1)
+      if len(key_val) > 1:
+        setting = key_val[0].split()   
+                # ['brightness', '0x00980900', '(int)']
+        param = key_val[1].split()     
+                # ['min=-64', 'max=64', 'step=1', 'default=0', 'value=0']
+        # Put paramaters into a dictionary
+        for j in range(0, len(param)):
+          param_pair=param[j].split('=',1)
+          # print(param_pair)
+          param_dict={}
+          if len(param_pair)>1:
+            a[param_pair[0]]=param_pair[1]
           else:
-            h = -1
-        a.update({'legend': legend})    # additional data on settings
-        a.update({'step': 1})           # adding to work with updateUVCsetting()
-      # Use setting name as key and dictionary of params as value
-      camSettings.update({setting[0]: a})
+            a[param_pair[0]]=None
+        # Add bitName and setting type to params dictionary 
+        a.update({'bitName': setting[1]})
+        a.update({'type': setting[2].strip("()")})
+        # Create a legend for menu entries and add to dictionary with other params
+        # if a['type'] == 'menu':
+        #   h = 0
+        #   legend = ''
+        #   while h >= 0:
+        #     h += 1
+        #     ih = i + h
+        #     if out[ih].startswith('\t\t\t\t') and (ih) <= nLines:
+        #       legend = legend + out[i+h].strip() + "   "
+        #     else:
+        #       h = -1
+        #   a.update({'legend': legend})    # additional data on settings
+        #   a.update({'step': 1})           # adding to work with updateUVCsetting()
+        # Use setting name as key and dictionary of params as value
+        camSettings.update({setting[0]: a})
   else:
     camSettings={}
   # for x in camSettings:

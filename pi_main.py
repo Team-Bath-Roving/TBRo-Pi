@@ -7,24 +7,14 @@ import time
 
 import socket
 import classes.Constrain
-from tbroLib.Comms import CommsServer
+from Comms.Comms import CommsServer
 from classes.SerialWrapper import SerialWrapper, scanUSB
-from classes.PanTilt import PanTilt,StatusNeopixel
-from tbroLib.Output import Output
-from classes.screwtank import ScrewTank
-from classes.RadioControl import RadioControl
+# from classes.PanTilt import PanTilt,StatusNeopixel
+from classes.LogiPanTilt import LogiPanTilt
+from Comms.Output import Output
+# from classes.screwtank import ScrewTank
+# from classes.RadioControl import RadioControl
 import sys
-import serial.tools.list_ports
-
-### CONSTANTS
-# Status colours     
-# Status = {
-# 	"STARTED"     : (300 ,1,0.5),
-# 	"SERIAL_CONN" : (200 ,1,0.5),
-# 	"SOCK_CONN"   : (100 ,1,0.5),
-# 	"POWERED"     : (0   ,0,1),
-# 	"ERROR"       : (0   ,1,0.5),                                                                   
-# }
 
 WATCHDOG_TIME = 5
 MCU_KEEPALIVE = 0.4 # if MCU doesn't recieve this it turns motors off
@@ -35,21 +25,10 @@ HOST_IP = "0.0.0.0"
 PORTS = [5000,5001,5432]
 
 # Serial settings
-MCU_PORT='/dev/ttyUSB0'
-MCU_BAUD=9600
-# RC_PORT='/dev/ttyACM0'
-# RC_BAUD=115200
+MCU_PORT='/dev/ttyS0'
+MCU_BAUD=115200
 
-# Rover movement settings
-# MAX_SPEED = 2000
-# MAX_ACCEL = 1000
-# MICROSTEP = 4
 MAX_PING = 2000
-
-# Motor controller startup commands
-INIT_COMMANDS=[	f"\nS{MAX_SPEED}\n",
-				f"\nA{MAX_ACCEL}\n",
-				f"\nM{MICROSTEP}\n"]
 
 ### Object instantiation
 
@@ -64,26 +43,17 @@ comms.connect()
 scanUSB(out)
 
 # init motor controller serial
-mcu=SerialWrapper(None,MCU_BAUD,out,WATCHDOG_TIME,"MCU","USB Serial")
-# init RC reciever serial
-rcSer=SerialWrapper(None,RC_BAUD,out,WATCHDOG_TIME,"RC","HKT6A-V2 RX")
-# init RC reciever module
-rc=RadioControl(rcSer,out)
+mcu=SerialWrapper(None,MCU_BAUD,out,WATCHDOG_TIME,"MCU")
 # init pan tilt
-pantilt=PanTilt(0.005) # update at 30Hz
-# init status light
-led=StatusNeopixel(0.05) # max brightness 20%
+pantilt=LogiPanTilt(out)
 # init screwtank driver
-screw=ScrewTank(mcu,MAX_SPEED,MAX_ACCEL,MICROSTEP,MAX_PING)
 
 ### Exit handler
 
 def exit_handler():
-		out.write("INFO","Shutting Down",False)
-		pantilt.enabled(False)
+		out.write("INFO","Shutting Down",True)
 		comms.close()
 		mcu.close()
-		led.off()
 		sys.exit()
 atexit.register(exit_handler)
 
@@ -98,9 +68,6 @@ powered=False
 # prevWatchdog=time.time()
 
 prevKeepalive=time.time()
-
-
-
 
 ### Main Loop
 while True:
@@ -119,10 +86,11 @@ while True:
 		else:
 			status="STARTED"
 	if status!=prevStatus:
-		led.dispHSV(*Status[status])
+		# led.dispHSV(*Status[status])
+		pass
 
 	# Update pan/tilt
-	pantilt.run()
+	# pantilt.run()
 
 	# Fetch latest TCP messages
 	data={}
@@ -133,33 +101,33 @@ while True:
 
 	
 	# Fetch latest commands from RC controller
-	rc.receive()
-	rc.process()
-	data.update(rc.commands)
+	# rc.receive()
+	# rc.process()
+	# data.update(rc.commands)
 	
 	for prefix,msg in data.items():
 		
 		if 'PING' == prefix:
 			out.write("ACK","Ping from laptop, forwarding to MCU")
-			screw.ping()
+			# screw.ping()
 		if 'CAM_PAN' == prefix:
 			pantilt.pan_speed(-msg)
 			# print(-msg)
 		if 'CAM_TILT' == prefix:
 			pantilt.tilt_speed(-msg)
-		if 'CAM_CENTRE' == prefix:
-			pantilt.pan_toward(0)
-			pantilt.tilt_toward(0)
-		if 'DRIVE' == prefix:
-			screw.drive(msg)
-		if 'TURN' == prefix:
-			screw.turn(msg)
-		if 'ROLL_R' == prefix:
-			screw.roll(msg)
-		if 'ROLL_L' == prefix:
-			screw.roll(msg)
-		if 'TURN_FORWARD' == prefix:
-			screw.turnForward(msg)
+		# if 'CAM_CENTRE' == prefix:
+		# 	pantilt.pan_toward(0)
+		# 	pantilt.tilt_toward(0)
+		# if 'DRIVE' == prefix:
+		# 	screw.drive(msg)
+		# if 'TURN' == prefix:
+		# 	screw.turn(msg)
+		# if 'ROLL_R' == prefix:
+		# 	screw.roll(msg)
+		# if 'ROLL_L' == prefix:
+		# 	screw.roll(msg)
+		# if 'TURN_FORWARD' == prefix:
+		# 	screw.turnForward(msg)
 	
 	# Fetch latest serial messages from MCU
 	

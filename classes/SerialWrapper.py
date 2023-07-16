@@ -1,6 +1,6 @@
 import serial
 import time
-from tbroLib.Output import Output
+from Comms.Output import Output
 import threading
 import serial.tools.list_ports
 
