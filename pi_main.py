@@ -18,13 +18,13 @@ import serial.tools.list_ports
 
 ### CONSTANTS
 # Status colours     
-Status = {
-	"STARTED"     : (300 ,1,0.5),
-	"SERIAL_CONN" : (200 ,1,0.5),
-	"SOCK_CONN"   : (100 ,1,0.5),
-	"POWERED"     : (0   ,0,1),
-	"ERROR"       : (0   ,1,0.5),                                                                   
-}
+# Status = {
+# 	"STARTED"     : (300 ,1,0.5),
+# 	"SERIAL_CONN" : (200 ,1,0.5),
+# 	"SOCK_CONN"   : (100 ,1,0.5),
+# 	"POWERED"     : (0   ,0,1),
+# 	"ERROR"       : (0   ,1,0.5),                                                                   
+# }
 
 WATCHDOG_TIME = 5
 MCU_KEEPALIVE = 0.4 # if MCU doesn't recieve this it turns motors off
@@ -37,13 +37,13 @@ PORTS = [5000,5001,5432]
 # Serial settings
 MCU_PORT='/dev/ttyUSB0'
 MCU_BAUD=9600
-RC_PORT='/dev/ttyACM0'
-RC_BAUD=115200
+# RC_PORT='/dev/ttyACM0'
+# RC_BAUD=115200
 
 # Rover movement settings
-MAX_SPEED = 2000
-MAX_ACCEL = 1000
-MICROSTEP = 4
+# MAX_SPEED = 2000
+# MAX_ACCEL = 1000
+# MICROSTEP = 4
 MAX_PING = 2000
 
 # Motor controller startup commands
