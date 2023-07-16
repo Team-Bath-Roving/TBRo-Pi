@@ -1,0 +1,6 @@
+[submodule "Streaming"]
+	path = Streaming
+	url = https://github.com/Team-Bath-Roving/Streaming
+[submodule "Comms"]
+	path = Comms
+	url = https://github.com/Team-Bath-Roving/Comms.git
