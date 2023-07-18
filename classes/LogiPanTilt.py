@@ -32,10 +32,13 @@ def find_dev_path(usb_id):
 # A class to control a Logitech Sphere/Orbit AF
 class LogiPanTilt:
     def __init__(self,output:Output):
+        self.current_pan=0
+        self.current_tilt=0
         self.output=output
         self.panspeed=0
         self.tiltspeed=0
-        self.prevInterval=0
+        self.panInterval=0
+        self.tiltInterval=0
         self.init=False
         self.usb_id=find_usb_id("Orbit")
         if not self.usb_id is None:
@@ -58,7 +61,7 @@ class LogiPanTilt:
                         self.init=True
                 else:
                     self.init=True
-                self.home()
+                # self.home()
             else:
                 output.write("ERROR","Failed to find Logitech Orbit/Sphere UVC /dev/video path",True)
         else:
@@ -89,7 +92,18 @@ class LogiPanTilt:
     def tilt_speed(self,speed):
         self.tiltspeed=speed
     def run(self):
-        pass
+        if self.panspeed!=0 and time.time()-self.panInterval>abs(1/self.panspeed):
+            if self.panspeed>0:
+                self.pan(100)
+            if self.panspeed<0:
+                self.pan(-100)
+            self.panInterval=time.time()
+        if self.tiltspeed!=0 and time.time()-self.tiltInterval>abs(1/self.tiltspeed):
+            if self.tiltspeed>0:
+                self.tilt(100)
+            if self.tiltspeed<0:
+                self.tilt(-100)
+            self.tiltInterval=time.time()
 
 # sphereaf=LogiPanTilt(Output())
 # sphereaf.tilt(-1000)
